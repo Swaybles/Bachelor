@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 
-# Classes
 class Point:
     def __init__(self, x, y, z):
         self.x = x
@@ -23,7 +22,6 @@ class Body:
         self.location = location
         self.velocity = velocity
 
-# Gravitational acceleration due to Earth
 def gravitational_acceleration(satellite, earth):
     G = 6.67408e-11
     dx = earth.location.x - satellite.location.x
@@ -36,7 +34,6 @@ def gravitational_acceleration(satellite, earth):
     acc = G * earth.mass / r_sq
     return Point(acc * dx / r, acc * dy / r, acc * dz / r)
 
-# Orbital elements conversion
 def orbital_elements(body, mu):
     r_vec = np.array([body.location.x, body.location.y, body.location.z])
     v_vec = np.array([body.velocity.x, body.velocity.y, body.velocity.z])
@@ -74,7 +71,6 @@ def orbital_elements(body, mu):
 
 
 def rk4_step(body, earth, dt):
-    # State: position and velocity
     def deriv(loc, vel):
         accel = gravitational_acceleration(Body('', 0, loc, vel), earth)
         return vel, accel
@@ -85,8 +81,7 @@ def rk4_step(body, earth, dt):
     k2_r, k2_v = deriv(r0 + k1_r * (dt/2), Point(v0.x + k1_v.x*(dt/2), v0.y + k1_v.y*(dt/2), v0.z + k1_v.z*(dt/2)))
     k3_r, k3_v = deriv(r0 + k2_r * (dt/2), Point(v0.x + k2_v.x*(dt/2), v0.y + k2_v.y*(dt/2), v0.z + k2_v.z*(dt/2)))
     k4_r, k4_v = deriv(r0 + k3_r * dt,   Point(v0.x + k3_v.x*dt,     v0.y + k3_v.y*dt,     v0.z + k3_v.z*dt))
-
-    # Combine increments
+    
     new_loc = Point(
         r0.x + (dt/6)*(k1_r.x + 2*k2_r.x + 2*k3_r.x + k4_r.x),
         r0.y + (dt/6)*(k1_r.y + 2*k2_r.y + 2*k3_r.y + k4_r.y),
@@ -107,11 +102,9 @@ def simulate_RK4(earth, leader, follower, dt, steps, axis='y'): # !! Change axis
     sep_axis = []
 
     for _ in range(steps):
-        # Advance both bodies one RK4 step
         rk4_step(leader, earth, dt)
         rk4_step(follower, earth, dt)
 
-        # Record separation
         if axis == 'x':
             d = follower.location.x - leader.location.x
         elif axis == 'y':
@@ -150,17 +143,16 @@ def plot_orbital_elements(times, *elem_lists, labels=None):
     plt.show()
 
 def run_simulation(earth, leader, follower, impulse_axis, impulse_sign, dt, steps, separation_axis='y'): # !! Change separation axis to desired axis !!
-    # Clone leader and follower
+    
     leader_copy = copy.deepcopy(leader)
     follower_copy = copy.deepcopy(follower)
 
-    # Apply impulse
+    # Edit impulse here
     k = 2960    # N/m, SERPENT = 2960
-    x = 0.006   # meters compression, SERPENT = 0.006
+    x = 0.006   # Meters compression, SERPENT = 0.006
     m = follower_copy.mass
     delta_v = 0.5*math.sqrt((k * x ** 2) / m)
 
-    # Apply impulse in desired direction and axis
     if impulse_axis == 'x':
         follower_copy.velocity.x += impulse_sign * delta_v
     elif impulse_axis == 'y':
@@ -168,11 +160,9 @@ def run_simulation(earth, leader, follower, impulse_axis, impulse_sign, dt, step
     elif impulse_axis == 'z':
         follower_copy.velocity.z += impulse_sign * delta_v
 
-    # Run simulation
     return simulate_RK4(earth, leader_copy, follower_copy, dt, steps, axis=separation_axis)
 
 def main():
-    # Shared initial bodies
     earth = Body("Earth", 5.972e24, Point(0,0,0), Point(0,0,0))
     orbit_radius = 6828000
     G = 6.67408e-11
@@ -190,14 +180,12 @@ def main():
     # Choose axis
     axis = 'y'
 
-    # Simulate
     ld, fd_pos, sep_pos = run_simulation(earth, leader, follower, impulse_axis=axis, impulse_sign=+1, dt=dt, steps=steps, separation_axis=axis)
     _, fd_neg, sep_neg = run_simulation(earth, leader, follower, impulse_axis=axis, impulse_sign=-1, dt=dt, steps=steps, separation_axis=axis)
 
 
     times = [i*dt for i in range(steps)]
 
-    # Plot signed separations
     plt.figure(figsize=(10,6))
     plt.plot(times, sep_pos, label='+ separation')
     plt.plot(times, sep_neg, label='- separation')
